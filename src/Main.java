@@ -1,4 +1,4 @@
-import classes.Base64Decoder;
+import common.Base64Decoder;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -8,14 +8,33 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.URL;
 import java.net.URLConnection;
-import java.util.Base64;
+import java.util.Arrays;
 import java.util.Scanner;
 
 public class Main {
     public static String MAIN_FOLDER_URL = "https://api.github.com/repos/EXBO-Studio/stalcraft-database/contents/ru/items"; // Ссылка на корень базы данных предметов
+    public static JsonObject CURRENT_WEAPON = new JsonObject(); // Хранение Json-объекта текущего оружия
+    public static JsonObject CURRENT_ARMOR = null; // Хранение Json-объекта текущей брони
     public static int CURRENT_LEVEL = 0; // Значение текущего уровня категории
     public static void main(String[] args) {
-        PrintJsonArray(GetJsonArrayFromString(MAIN_FOLDER_URL), "name");
+        RedicretController();
+    }
+    /* Контроллер для управления переходами между разделами или категориями */
+    public static void RedicretController() {
+        JsonArray jsonArray = new JsonArray();
+        for (JsonElement jsonElement : GetJsonArrayFromString(MAIN_FOLDER_URL)) {
+            if (jsonElement.getAsJsonObject().getAsJsonPrimitive("name").getAsString().matches("armor||weapon")) {
+                jsonArray.add(jsonElement);
+            }
+        }
+        PrintJsonArray(jsonArray, "name");
+        if (CURRENT_WEAPON != null) {
+            System.out.println("Введите gun для перехода к текущему оружию");
+        }
+        if (CURRENT_ARMOR != null) {
+            System.out.println("Введите gun для перехода к текущему оружию");
+        }
+
     }
     /* Метод для получения JSON-массива, используя ссылку (API) */
     public static JsonArray GetJsonArrayFromString(String sUrl) {
@@ -62,30 +81,31 @@ public class Main {
         }
         System.out.println("\nИспользуйте -1 для возвращения к списку категорий оружия, 0 для возвращения к предыдущему списку, n для перехода к выбранному значению:\n");
         Scanner scanner = new Scanner(System.in);
-        RedicretJsonArray(jsonArray, GetRedicretKey());
+        RedicretBetweenJsons(jsonArray, GetRedicretKey());
     }
     public static void PrintJsonObject(JsonObject jsonObject) {
-        System.out.println(jsonObject);
+        System.out.println("Выбранное оружие изменено\nПолученный Json-объект: " + jsonObject);
         System.out.println("\nИспользуйте -1 для возвращения к списку категорий оружия, 0 для возвращения к предыдущему списку, n для перехода к выбранному значению:\n");
         Scanner scanner = new Scanner(System.in);
-        RedicretJsonArray(null, GetRedicretKey());
+        RedicretBetweenJsons(null, GetRedicretKey());
     }
     /* Метод для перехода между категориями */
-    public static void RedicretJsonArray(JsonArray jsonArray, int redicretKey) {
+    public static void RedicretBetweenJsons(JsonArray jsonArray, int redicretKey) {
         switch (redicretKey) {
             case -1 ->  {
                 CURRENT_LEVEL = 0;
-                PrintJsonArray(GetJsonArrayFromString(MAIN_FOLDER_URL), "name");
+                RedicretController();
             }
             case 0 ->  {
                 CURRENT_LEVEL--;
-                PrintJsonArray(jsonArray, "name");
+                RedicretController();
             }
             default -> {
                 if (CURRENT_LEVEL == 2) {
                     JsonObject targetObject = GetJsonObjectFromString(jsonArray.get(redicretKey - 1).getAsJsonObject().getAsJsonPrimitive("url").getAsString());
-                    JsonObject targetObjectContent = Base64Decoder.DecryptContent(targetObject.getAsJsonPrimitive("content").getAsString());
-                    PrintJsonObject(targetObjectContent);
+                    JsonObject targetObjectFromContent = Base64Decoder.DecryptContent(targetObject.getAsJsonPrimitive("content").getAsString());
+                    CURRENT_WEAPON = targetObjectFromContent;
+                    PrintJsonObject(targetObjectFromContent);
                 }
                 else {
                     CURRENT_LEVEL++;
